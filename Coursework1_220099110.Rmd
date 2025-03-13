@@ -1,0 +1,148 @@
+---
+title: "MTH6139 Time Series" 
+subtitle: "CO2 Emmisions Study" 
+author: "Tina Nguyen" 
+date: "Spring term 2025" 
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab 
+    highlight: tango
+---
+ 
+```{r, echo=FALSE}
+# This code will display the QMUL logo at the top right of the page
+# Do not change this code
+htmltools::img(src = knitr::image_uri("images/QMlogo.png"),
+               alt = 'logo',
+               style = 'position:absolute; top:0; right:0; padding:10px; width:20%;')
+```
+
+
+# Understanding the Mauna Loa CO2 Data:
+The data displays atmospheric concentrations of CO2, expressed in parts per million (ppm) and reported in the preliminary 1997 SIO manometric mole fraction scale. It is in the format of a time series of 468 observations monthly from 1959 to 1997.
+
+
+## Project Purpose:
+1. Forecast CO2 growth using Prophet
+2. Analyse the trends and seasonality in atmospheric CO2 levels over time.
+3. Visualize the data to understand its behaviour.
+4. Quantify the growth rate of CO2 concentrations with linear regression.
+5. Draw meaningful insights about climate change.
+
+# Prophet Forecast
+```{r message=FALSE}
+co2.df = data.frame(
+    ds=zoo::as.yearmon(time(co2)), 
+    y=co2)
+model = prophet::prophet(co2.df)
+FutureDates = prophet::make_future_dataframe(model, periods=12, freq="month")
+Prediction = predict(model, FutureDates)
+plot(model,Prediction)
+```
+
+Here we first convert the time series to a data frame and the time index to a year-month format. We then fit the Prophet model. After this, we create future dates for forecasting, and finally we can display the forecast plot as seen above.
+
+> <font size = "2">📈</font> We can also display the trend and seasonality plots:
+
+``` {r, echo=FALSE}
+prophet::prophet_plot_components(model,Prediction)
+```
+
+## 🔎Observations and Interpretation
+The forecast plot suggests that CO2 levels will continue to rise in the near future (We forecasted 1 year into the future).
+
+The trend plot shows a steady increase in CO2 levels over time, and the seasonality plot display highest levels of CO2 around May, and lowest levels around October
+
+The trend plot results align with the growing concern for climate change - CO2 is a greenhouse gas, meaning it absorbs and radiates heat, contributing to the Earth's natural greenhouse effect and warming the planet. 
+
+The seasonality plot does not directly link CO2 emissions to climate change, but it provides an insight to what time of the year CO2 emissions are the highest.
+
+>🍃CO2 levels reach their highest in late spring, likely due to plants not fully absorbing the CO2, leading to an accumulation in the environment. 
+>
+>☀️The CO2 levels start to drop significantly around July which is due to photosynthesis being at its peak.
+
+
+# Linear regression
+We can run a linear regression to gain an understanding of the growth of the series
+
+## Basic Linear Model
+```{r}
+plot(co2, type="l")
+model1 = lm(co2~time(co2), na.action=NULL)
+class(fitted(model1))
+lines(fitted(model1), col="palevioletred") 
+```
+
+We can see that the general trend is as observed before, that the CO2 levels are increasing over time. 
+
+> <font size="2">⚠️</font> The model fits relatively well, so there is no need for us to consider the log model.
+
+## Trend and seasonality
+To get a better understanding of the growth, we can fit a model including the seasonality and trend.
+
+```{r}
+SeasonalLabels = factor(cycle(co2), 
+                        labels=c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+model3 = lm(co2~0+time(co2)+SeasonalLabels, na.action=NULL)
+plot(co2, type="l")
+lines(fitted(model3), col="palevioletred")
+mosaic::msummary(model3)
+```
+
+The B1 coefficient is 1.310 which suggests that CO2 concentrations increase by 1.310 ppm each year on average. We have a very small p-value (<2e-16) which implies that the time trend is statistically significant.
+
+# ❓What if we consider different time frames?
+We previously forecasted CO2 levels for the next year but what if we forecasted for the next 5 and 10 years?
+Will we see the same pattern? Let's find out!
+
+### 5 years:
+```{r, echo=FALSE, message=FALSE}
+model5 = prophet::prophet(co2.df)
+FutureDates5 = prophet::make_future_dataframe(model5, periods=60, freq="month")
+Prediction5 = predict(model5, FutureDates5)
+plot(model5,Prediction5,)
+```
+
+### 10 Years:
+```{r, echo=FALSE, message=FALSE}
+model10 = prophet::prophet(co2.df)
+FutureDates10 = prophet::make_future_dataframe(model10, periods=120, freq="month")
+Prediction10 = predict(model10, FutureDates10)
+plot(model10,Prediction10)
+```
+
+### Trend and Seasonality:
+![](images/TimeSeason.png)
+
+### 🔎Observations and Interpretation
+The forecast and trend plots suggest that the CO2 levels are predicted to continue rising over the next 5 and 10 years, however the uncertainty interval widens as we forecast further into the future, reflecting increased uncertainty in long-term predictions.
+
+The seasonal peaks and troughs remain consistent (as expected since plants have a consistent photosynthesis cycle).
+
+# Summary
+The data shows a an increase in CO2 from around 315ppm in 1960 to around 367ppm in 1997. Furthermore, the Prophet forecasting system predicted that the CO2 levels would rise to around 380 ppm by 2017.
+
+An atmospheric carbon dioxide study published by NOAA show *"global atmospheric carbon dioxide was 405.0 ± 0.1 ppm, a new record high"*
+
+![](images/2017CO2.png)
+
+[Read the full article here](https://www.climate.gov/news-features/featured-images/2017-state-climate-atmospheric-carbon-dioxide#:~:text=Preliminary%20results%20for%202017%20indicate,increased%202.2%20±%200.1%20ppm.)
+
+The actual CO2 level in 2017 is much higher than what we forecasted which could imply that CO2 growth is accelerating more than we expect. This could be due to economic growth in developing countries or industrial expansion.
+
+> ❗️️Reducing CO2 emissions is critical to limiting global warming and avoiding the most severe impacts of climate change, such as extreme weather, sea level rise, and ecosystem disruptions.
+
+
+
+
+
+
+
+
+
+
+
+
